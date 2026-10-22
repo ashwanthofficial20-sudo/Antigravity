@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Speed Racer</title>
+    <style>
+        :root {
+            --bg-color: #0d0f14;
+            --road-color: #1e222b;
+            --accent-orange: #ff5722;
+            --accent-amber: #ff9800;
+            --accent-green: #4caf50;
+            --accent-cyan: #00e5ff;
+            --card-bg: rgba(22, 27, 34, 0.85);
+            --border-glow: rgba(255, 87, 34, 0.4);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background: radial-gradient(circle at top, #1a1e29 0%, var(--bg-color) 100%);
+            color: #fff;
+            margin: 0;
+            padding: 15px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 520px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        header h1 {
+            margin: 5px 0 2px 0;
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            background: linear-gradient(90deg, #ff9800, #ff5722, #00e5ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        header p {
+            margin: 0 0 10px 0;
+            color: #8b949e;
+            font-size: 14px;
+        }
+
+        /* Top HUD Dashboard */
+        #hud {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .hud-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 8px 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .hud-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #8b949e;
+            margin-bottom: 2px;
+        }
+
+        .hud-value {
+            font-size: 22px;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        #speed-val { color: var(--accent-orange); }
+        #score-val { color: var(--accent-cyan); }
+        #multiplier-val { color: var(--accent-green); }
+
+        /* Speed bar meter */
+        #speed-bar-container {
+            width: 100%;
+            height: 6px;
+            background: #161b22;
+            border-radius: 3px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #speed-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4caf50, #ff9800, #f44336);
+            transition: width 0.1s linear;
+        }
+
+        /* Track / Road Arena */
+        #track-wrapper {
+            position: relative;
+            width: 100%;
+            height: 480px;
+            margin: 0 auto;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 3px solid #30363d;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 87, 34, 0.15);
+        }
+
+        .road {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--road-color);
+            overflow: hidden;
+        }
+
+        /* Road lane lines (vertically moving) */
+        .lane-divider {
+            position: absolute;
+            top: 0;
+            width: 6px;
+            height: 200%;
+            border-left: 4px dashed rgba(255, 255, 255, 0.4);
+            transform: translateY(0);
+        }
+        #lane-1 { left: 25%; }
+        #lane-2 { left: 50%; }
+        #lane-3 { left: 75%; }
+
+        /* Rumble curbs */
+        .curb {
+            position: absolute;
+            top: 0;
+            width: 12px;
+            height: 200%;
+            background: repeating-linear-gradient(
+                to bottom,
+                #f44336 0px,
+                #f44336 20px,
+                #ffffff 20px,
+                #ffffff 40px
+            );
+        }
+        .curb.left { left: 0; }
+        .curb.right { right: 0; }
+
+        /* Player Car */
+        .car {
+            position: absolute;
+            width: 44px;
+            height: 72px;
+            z-index: 10;
+            transition: transform 0.1s ease-out;
+            pointer-events: none;
+        }
+
+        .car-body {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #ff5722 0%, #d84315 100%);
+            border-radius: 12px 12px 8px 8px;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(255, 87, 34, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            border: 2px solid #ff9800;
+        }
+
+        /* Car details */
+        .car-windshield {
+            position: absolute;
+            top: 18px;
+            left: 6px;
+            right: 6px;
+            height: 14px;
+            background: #111;
+            border-radius: 4px 4px 2px 2px;
+            border: 1px solid #444;
+        }
+
+        .car-roof {
+            position: absolute;
+            top: 34px;
+            left: 8px;
+            right: 8px;
+            height: 16px;
+            background: #bf360c;
+            border-radius: 2px;
+        }
+
+        .car-headlight {
+            position: absolute;
+            top: 2px;
+            width: 8px;
+            height: 6px;
+            background: #fff;
+            border-radius: 2px;
+            box-shadow: 0 -4px 10px #00e5ff, 0 0 6px #fff;
+        }
+        .car-headlight.left { left: 5px; }
+        .car-headlight.right { right: 5px; }
+
+        .car-taillight {
+            position: absolute;
+            bottom: 2px;
+            width: 8px;
+            height: 4px;
+            background: #ff1744;
+            border-radius: 1px;
+            box-shadow: 0 2px 8px #f44336;
+        }
+        .car-taillight.left { left: 5px; }
+        .car-taillight.right { right: 5px; }
+
+        /* Thruster Flames */
+        .thruster-flame {
+            position: absolute;
+            bottom: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 18px;
+            background: radial-gradient(circle, #00e5ff 10%, #ff5722 60%, transparent 90%);
+            border-radius: 50%;
+            opacity: 0;
+            transition: opacity 0.15s, height 0.15s;
+        }
+        .nitro-active .thruster-flame {
+            opacity: 1;
+            height: 24px;
+            filter: drop-shadow(0 0 8px #ff5722);
+        }
+
+        /* Obstacles */
+        .obstacle {
+            position: absolute;
+            width: 42px;
+            height: 68px;
+            border-radius: 10px;
+            z-index: 5;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+        }
+
+        .obstacle.sedan {
+            background: linear-gradient(180deg, #1976d2 0%, #0d47a1 100%);
+            border: 2px solid #64b5f6;
+        }
+        .obstacle.truck {
+            width: 50px;
+            height: 84px;
+            background: linear-gradient(180deg, #e65100 0%, #bf360c 100%);
+            border: 2px solid #ffb74d;
+            border-radius: 6px;
+        }
+        .obstacle.hazard {
+            background: repeating-linear-gradient(45deg, #ffd600, #ffd600 8px, #212121 8px, #212121 16px);
+            border: 2px solid #ffea00;
+            border-radius: 6px;
+            height: 40px;
+        }
+
+        .obstacle-window {
+            position: absolute;
+            top: 14px;
+            left: 6px;
+            right: 6px;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 3px;
+        }
+
+        /* Typing & Cadence Display */
+        #typing-section {
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 8px 16px;
+        }
+
+        #typing-display {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--accent-orange);
+            font-family: 'Courier New', Courier, monospace;
+            min-width: 45px;
+            text-align: center;
+        }
+
+        #cadence-status {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #8b949e;
+            transition: color 0.15s, transform 0.15s;
+        }
+
+        /* Interactive On-Screen Keypad */
+        #controls-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+        }
+
+        .key-btn {
+            background: #1f242d;
+            border: 1px solid #3b4252;
+            color: #e5e9f0;
+            border-radius: 8px;
+            padding: 8px 4px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .key-btn:hover {
+            background: #2e3440;
+            border-color: #88c0d0;
+        }
+
+        .key-btn.active {
+            background: var(--accent-orange) !important;
+            color: #fff !important;
+            transform: scale(0.92);
+            box-shadow: 0 0 15px rgba(255, 87, 34, 0.7);
+            border-color: #ff9800 !important;
+        }
+
+        .key-num {
+            font-size: 18px;
+            font-weight: 800;
+            font-family: monospace;
+        }
+
+        .key-dir {
+            font-size: 9px;
+            text-transform: uppercase;
+            color: #88c0d0;
+            letter-spacing: 0.5px;
+        }
+
+        .key-btn.active .key-dir {
+            color: #fff;
+        }
+
+        /* Audio & Help Controls */
+        #footer-bar {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #8b949e;
+            width: 100%;
+        }
+
+        .small-btn {
+            background: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .small-btn:hover {
+            background: #30363d;
+        }
+
+        /* Overlay Modals */
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(12px);
+            border: 2px solid #30363d;
+            padding: 24px 30px;
+            border-radius: 16px;
+            display: none;
+            z-index: 100;
+            width: 85%;
+            max-width: 380px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 87, 34, 0.3);
+            text-align: center;
+        }
+
+        .modal h2 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            color: #f44336;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .modal p {
+            margin: 8px 0;
+            color: #c9d1d9;
+            font-size: 15px;
+        }
+
+        .stat-highlight {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-orange);
+            font-family: monospace;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #ff5722 0%, #e64a19 100%);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            margin-top: 15px;
+            box-shadow: 0 6px 20px rgba(255, 87, 34, 0.4);
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 87, 34, 0.6);
+            background: linear-gradient(135deg, #ff7043 0%, #f4511e 100%);
+        }
+
+        /* Floating Score Floaters */
+        .floating-text {
+            position: absolute;
+            font-weight: 800;
+            font-size: 14px;
+            color: var(--accent-cyan);
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 20;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-35px) scale(1.3); }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <header>
+            <h1>Typing Speed Racer</h1>
+            <p>Type numbers 1-6 rapidly to accelerate, steer, and score!</p>
+        </header>
+
+        <!-- Top Status Dashboard -->
+        <div id="hud">
+            <div class="hud-card">
+                <div class="hud-label">Speed</div>
+                <div class="hud-value"><span id="speed-val">0</span> <small style="font-size: 12px; color: #8b949e;">MPH</small></div>
+            </div>
+            <div class="hud-card">
+                <div class="hud-label">Score</div>
+                <div class="hud-value" id="score-val">0</div>
+            </div>
+            <div class="hud-card">
+                <div class="hud-label">Multiplier</div>
+                <div class="hud-value" id="multiplier-val">1.0x</div>
+            </div>
+        </div>
+
+        <!-- Dynamic Speed Meter -->
+        <div id="speed-bar-container">
+            <div id="speed-bar"></div>
+        </div>
+
+        <!-- Main Road Canvas / Arena -->
+        <div id="track-wrapper">
+            <div class="road" id="road">
+                <!-- Rumble strips on curbs -->
+                <div class="curb left" id="curb-left"></div>
+                <div class="curb right" id="curb-right"></div>
+
+                <!-- Animated Lane Markings -->
+                <div class="lane-divider" id="lane-1"></div>
+                <div class="lane-divider" id="lane-2"></div>
+                <div class="lane-divider" id="lane-3"></div>
+
+                <!-- Player Car -->
+                <div class="car" id="car">
+                    <div class="car-body">
+                        <div class="car-headlight left"></div>
+                        <div class="car-headlight right"></div>
+                        <div class="car-windshield"></div>
+                        <div class="car-roof"></div>
+                        <div class="car-taillight left"></div>
+                        <div class="car-taillight right"></div>
+                        <div class="thruster-flame"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Start Game Prompt Overlay -->
+            <div id="start-screen" class="modal" style="display: block;">
+                <h2 style="color: var(--accent-orange);">Ready to Race?</h2>
+                <p>Type <strong>1 to 6</strong> to steer & propel your car.</p>
+                <p style="color: #8b949e; font-size: 13px;">The faster you type, the higher your speed, multiplier, and score!</p>
+                <button id="start-btn" class="action-btn">Start Engine</button>
+            </div>
+
+            <!-- Game Over Modal -->
+            <div id="game-over" class="modal">
+                <h2>Crash! Game Over</h2>
+                <p>Final Score: <span id="final-score" class="stat-highlight">0</span></p>
+                <p>High Score: <span id="high-score" class="stat-highlight" style="color: var(--accent-cyan);">0</span></p>
+                <p>Top Speed: <span id="max-speed" style="color: #ff9800; font-weight: bold;">0 MPH</span></p>
+                <p>Typing Cadence: <span id="avg-kpm" style="color: #4caf50; font-weight: bold;">0 KPM</span></p>
+                <button id="restart-btn" class="action-btn">Race Again</button>
+            </div>
+        </div>
+
+        <!-- Typing & Cadence Live Feedback -->
+        <div id="typing-section">
+            <div style="text-align: left;">
+                <div style="font-size: 11px; text-transform: uppercase; color: #8b949e;">Last Key</div>
+                <div id="typing-display">-</div>
+            </div>
+            <div id="cadence-status">Press 1-6 to Launch!</div>
+            <div style="text-align: right;">
+                <div style="font-size: 11px; text-transform: uppercase; color: #8b949e;">Streak</div>
+                <div id="streak-val" style="font-size: 22px; font-weight: bold; color: var(--accent-green);">0</div>
+            </div>
+        </div>
+
+        <!-- Interactive 1-6 Directional Keypad -->
+        <div id="controls-grid">
+            <div class="key-btn" data-key="1">
+                <span class="key-num">1</span>
+                <span class="key-dir">Left</span>
+            </div>
+            <div class="key-btn" data-key="2">
+                <span class="key-num">2</span>
+                <span class="key-dir">Up-Left</span>
+            </div>
+            <div class="key-btn" data-key="3">
+                <span class="key-num">3</span>
+                <span class="key-dir">Turbo Up</span>
+            </div>
+            <div class="key-btn" data-key="4">
+                <span class="key-num">4</span>
+                <span class="key-dir">Up-Right</span>
+            </div>
+            <div class="key-btn" data-key="5">
+                <span class="key-num">5</span>
+                <span class="key-dir">Right</span>
+            </div>
+            <div class="key-btn" data-key="6">
+                <span class="key-num">6</span>
+                <span class="key-dir">Brake</span>
+            </div>
+        </div>
+
+        <!-- Footer / Sound Toggle -->
+        <div id="footer-bar">
+            <span>Type 1-6 on top row or Numpad</span>
+            <button id="sound-btn" class="small-btn">Sound: ON 🔊</button>
+        </div>
+    </div>
+
+    <script>
+        // Audio Synthesizer (Zero external audio files required)
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playEngineRev(freq = 180) {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.5, this.ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.12);
+            }
+
+            playNitro() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(650, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playOvertake() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, this.ctx.currentTime); // D5
+                osc.frequency.setValueAtTime(880, this.ctx.currentTime + 0.08); // A5
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playCrash() {
+                if (!this.enabled || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(30, this.ctx.currentTime + 0.5);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.5);
+            }
+        }
+
+        // Main Game Controller
+        const game = {
+            // DOM Elements
+            track: document.getElementById('track-wrapper'),
+            road: document.getElementById('road'),
+            car: document.getElementById('car'),
+            laneDividers: [
+                document.getElementById('lane-1'),
+                document.getElementById('lane-2'),
+                document.getElementById('lane-3')
+            ],
+            curbs: [
+                document.getElementById('curb-left'),
+                document.getElementById('curb-right')
+            ],
+            speedVal: document.getElementById('speed-val'),
+            scoreVal: document.getElementById('score-val'),
+            multiplierVal: document.getElementById('multiplier-val'),
+            speedBar: document.getElementById('speed-bar'),
+            typingDisplay: document.getElementById('typing-display'),
+            cadenceStatus: document.getElementById('cadence-status'),
+            streakVal: document.getElementById('streak-val'),
+            startScreen: document.getElementById('start-screen'),
+            startBtn: document.getElementById('start-btn'),
+            gameOverDisplay: document.getElementById('game-over'),
+            restartBtn: document.getElementById('restart-btn'),
+            finalScoreDisplay: document.getElementById('final-score'),
+            highScoreDisplay: document.getElementById('high-score'),
+            maxSpeedDisplay: document.getElementById('max-speed'),
+            avgKpmDisplay: document.getElementById('avg-kpm'),
+            soundBtn: document.getElementById('sound-btn'),
+            keyButtons: document.querySelectorAll('.key-btn'),
+
+            // Sound Engine
+            sound: new SoundFX(),
+
+            // Game State
+            gameActive: false,
+            score: 0,
+            distance: 0,
+            speed: 0, // MPH (0 to 140)
+            maxSpeedReached: 0,
+            multiplier: 1.0,
+            streak: 0,
+            totalKeysPressed: 0,
+            gameStartTime: 0,
+            lastKeyTime: 0,
+            carX: 0,
+            carY: 0,
+            carTilt: 0,
+            roadOffset: 0,
+            obstacles: [],
+            spawnTimer: 0,
+            spawnInterval: 120, // Frames between obstacle spawns
+            animationId: null,
+            highScore: parseInt(localStorage.getItem('tsr_highscore') || '0', 10),
+
+            // Key Mappings for 1-6
+            // (dx and dy represent impulse offsets on each keypress)
+            keyMap: {
+                '1': { x: -32, y: 0, label: 'LEFT', tilt: -14 },
+                '2': { x: -22, y: -22, label: 'UP-LEFT', tilt: -10 },
+                '3': { x: 0, y: -30, label: 'TURBO UP', tilt: 0 },
+                '4': { x: 22, y: -22, label: 'UP-RIGHT', tilt: 10 },
+                '5': { x: 32, y: 0, label: 'RIGHT', tilt: 14 },
+                '6': { x: 0, y: 26, label: 'BRAKE', tilt: 0 }
+            },
+
+            init() {
+                this.highScoreDisplay.textContent = this.highScore;
+                this.setupEventListeners();
+                this.resetPosition();
+            },
+
+            resetPosition() {
+                const trackRect = this.track.getBoundingClientRect();
+                this.carX = (trackRect.width / 2) - 22; // Centered
+                this.carY = trackRect.height - 110;     // Near bottom
+                this.updateCarTransform();
+            },
+
+            updateCarTransform() {
+                this.car.style.left = `${this.carX}px`;
+                this.car.style.top = `${this.carY}px`;
+                this.car.style.transform = `rotate(${this.carTilt}deg)`;
+            },
+
+            setupEventListeners() {
+                // Keyboard Input
+                window.addEventListener('keydown', (e) => {
+                    let key = e.key;
+
+                    // Handle Numpad 1-6
+                    if (key.startsWith('Numpad')) {
+                        key = key.replace('Numpad', '');
+                    }
+
+                    if (this.gameActive && this.keyMap[key]) {
+                        e.preventDefault();
+                        this.handleTypingInput(key);
+                    } else if (!this.gameActive && (e.key === ' ' || e.key === 'Enter')) {
+                        if (this.gameOverDisplay.style.display === 'block') {
+                            this.resetGame();
+                            this.startGame();
+                        } else if (this.startScreen.style.display === 'block') {
+                            this.startGame();
+                        }
+                    }
+                });
+
+                // UI Button controls (Click or Tap)
+                this.keyButtons.forEach(btn => {
+                    const key = btn.dataset.key;
+                    btn.addEventListener('pointerdown', (e) => {
+                        e.preventDefault();
+                        if (this.gameActive) {
+                            this.handleTypingInput(key);
+                        }
+                    });
+                });
+
+                // Start and Restart buttons
+                this.startBtn.addEventListener('click', () => {
+                    this.sound.init();
+                    this.startGame();
+                });
+
+                this.restartBtn.addEventListener('click', () => {
+                    this.sound.init();
+                    this.resetGame();
+                    this.startGame();
+                });
+
+                // Sound Toggle
+                this.soundBtn.addEventListener('click', () => {
+                    this.sound.init();
+                    this.sound.enabled = !this.sound.enabled;
+                    this.soundBtn.textContent = this.sound.enabled ? 'Sound: ON 🔊' : 'Sound: OFF 🔇';
+                });
+            },
+
+            startGame() {
+                this.startScreen.style.display = 'none';
+                this.gameOverDisplay.style.display = 'none';
+                this.gameActive = true;
+                this.gameStartTime = Date.now();
+                this.lastKeyTime = Date.now();
+                this.speed = 35; // Initial cruising speed
+                this.cadenceStatus.textContent = 'Keep typing to accelerate!';
+                this.cadenceStatus.style.color = '#8b949e';
+                
+                // Start RAF animation loop
+                cancelAnimationFrame(this.animationId);
+                this.animationId = requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            handleTypingInput(key) {
+                const now = Date.now();
+                const deltaMs = now - this.lastKeyTime;
+                this.lastKeyTime = now;
+                this.totalKeysPressed++;
+
+                // Visual button highlight
+                const btn = document.querySelector(`.key-btn[data-key="${key}"]`);
+                if (btn) {
+                    btn.classList.add('active');
+                    setTimeout(() => btn.classList.remove('active'), 140);
+                }
+
+                // Update display
+                this.typingDisplay.textContent = key;
+
+                // Move car based on key direction
+                const dir = this.keyMap[key];
+                const trackWidth = this.track.clientWidth;
+                const trackHeight = this.track.clientHeight;
+
+                this.carX += dir.x;
+                this.carY += dir.y;
+                this.carTilt = dir.tilt;
+
+                // Clamp within road curbs
+                const minX = 14;
+                const maxX = trackWidth - 44 - 14;
+                const minY = 30;
+                const maxY = trackHeight - 85;
+
+                this.carX = Math.max(minX, Math.min(maxX, this.carX));
+                this.carY = Math.max(minY, Math.min(maxY, this.carY));
+                this.updateCarTransform();
+
+                // Speed Cadence calculation
+                // Fast typing (< 220ms): Nitro Boost!
+                // Good typing (< 450ms): Fast cruise!
+                // Slow typing (> 750ms): Losing speed
+                if (deltaMs < 200) {
+                    this.speed = Math.min(140, this.speed + 12);
+                    this.streak++;
+                    this.multiplier = Math.min(5.0, (1.0 + (this.streak * 0.1)).toFixed(1));
+                    this.cadenceStatus.textContent = '⚡ NITRO BOOST!';
+                    this.cadenceStatus.style.color = '#00e5ff';
+                    this.car.classList.add('nitro-active');
+                    this.sound.playNitro();
+                    this.createFloatingText('⚡ NITRO!', this.carX, this.carY, '#00e5ff');
+                } else if (deltaMs < 420) {
+                    this.speed = Math.min(115, this.speed + 6);
+                    this.streak++;
+                    this.multiplier = Math.min(5.0, (1.0 + (this.streak * 0.05)).toFixed(1));
+                    this.cadenceStatus.textContent = '💨 FAST SPEED!';
+                    this.cadenceStatus.style.color = '#ff9800';
+                    this.car.classList.remove('nitro-active');
+                    this.sound.playEngineRev(260);
+                } else {
+                    // Regular stroke
+                    this.speed = Math.min(90, this.speed + 2.5);
+                    this.streak = Math.max(0, this.streak - 1);
+                    this.multiplier = 1.0;
+                    this.cadenceStatus.textContent = 'Cruising... Type faster!';
+                    this.cadenceStatus.style.color = '#8b949e';
+                    this.car.classList.remove('nitro-active');
+                    this.sound.playEngineRev(180);
+                }
+
+                if (this.speed > this.maxSpeedReached) {
+                    this.maxSpeedReached = Math.round(this.speed);
+                }
+
+                // Add instant keystroke points
+                this.score += Math.round(10 * this.multiplier);
+                this.updateHUD();
+            },
+
+            createFloatingText(text, x, y, color = '#00e5ff') {
+                const el = document.createElement('div');
+                el.className = 'floating-text';
+                el.textContent = text;
+                el.style.left = `${x}px`;
+                el.style.top = `${y}px`;
+                el.style.color = color;
+                this.road.appendChild(el);
+                setTimeout(() => {
+                    if (el.parentNode) el.parentNode.removeChild(el);
+                }, 800);
+            },
+
+            spawnObstacle() {
+                const trackWidth = this.track.clientWidth;
+                const laneWidth = (trackWidth - 30) / 4;
+                const lane = Math.floor(Math.random() * 4);
+                const x = 16 + (lane * laneWidth) + (laneWidth / 2) - 21;
+
+                const obstacle = document.createElement('div');
+                obstacle.className = 'obstacle';
+
+                // Randomize obstacle type
+                const rand = Math.random();
+                let type = 'sedan';
+                let obsSpeed = 25; // Base downward traffic speed
+
+                if (rand < 0.25) {
+                    type = 'truck';
+                    obsSpeed = 18;
+                    obstacle.classList.add('truck');
+                } else if (rand < 0.5) {
+                    type = 'hazard';
+                    obsSpeed = 0; // Stationary barrier
+                    obstacle.classList.add('hazard');
+                } else {
+                    obstacle.classList.add('sedan');
+                    const windowDiv = document.createElement('div');
+                    windowDiv.className = 'obstacle-window';
+                    obstacle.appendChild(windowDiv);
+                }
+
+                obstacle.style.left = `${x}px`;
+                obstacle.style.top = `-80px`;
+                this.road.appendChild(obstacle);
+
+                this.obstacles.push({
+                    el: obstacle,
+                    x: x,
+                    y: -80,
+                    width: obstacle.offsetWidth || 42,
+                    height: obstacle.offsetHeight || 68,
+                    speed: obsSpeed,
+                    overtaken: false
+                });
+            },
+
+            gameLoop() {
+                if (!this.gameActive) return;
+
+                const dt = 1 / 60;
+
+                // Natural speed decay if player stops typing
+                if (this.speed > 20) {
+                    this.speed -= 14 * dt;
+                } else if (this.speed > 0) {
+                    this.speed -= 4 * dt;
+                }
+                this.speed = Math.max(0, this.speed);
+
+                // Car tilt naturally returns to 0
+                this.carTilt *= 0.88;
+                if (Math.abs(this.carTilt) < 0.5) this.carTilt = 0;
+                this.updateCarTransform();
+
+                // Accumulate distance and score proportional to speed
+                this.distance += (this.speed * dt);
+                this.score += Math.round((this.speed * 0.15) * this.multiplier);
+
+                // Road scrolling animation
+                this.roadOffset = (this.roadOffset + this.speed * 0.4) % 40;
+                this.laneDividers.forEach(div => {
+                    div.style.transform = `translateY(${this.roadOffset}px)`;
+                });
+                this.curbs.forEach(curb => {
+                    curb.style.transform = `translateY(${this.roadOffset}px)`;
+                });
+
+                // Spawn obstacles dynamically based on score and speed
+                this.spawnTimer++;
+                const dynamicSpawnInterval = Math.max(45, Math.floor(130 - (this.score * 0.015) - (this.speed * 0.3)));
+                if (this.spawnTimer >= dynamicSpawnInterval) {
+                    this.spawnTimer = 0;
+                    this.spawnObstacle();
+                }
+
+                // Update obstacles
+                const carRect = {
+                    left: this.carX + 4,
+                    right: this.carX + 40,
+                    top: this.carY + 4,
+                    bottom: this.carY + 68
+                };
+
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    const obs = this.obstacles[i];
+                    // Obstacle moves relative to player's forward speed
+                    const relativeSpeed = (this.speed * 0.5) + (30 - obs.speed) * 0.25;
+                    obs.y += relativeSpeed;
+                    obs.el.style.top = `${obs.y}px`;
+
+                    // Check Overtake Bonus
+                    if (!obs.overtaken && obs.y > this.carY + 40) {
+                        obs.overtaken = true;
+                        const overtakePts = Math.round(50 * this.multiplier);
+                        this.score += overtakePts;
+                        this.sound.playOvertake();
+                        this.createFloatingText(`+${overtakePts}`, obs.x, this.carY - 10, '#4caf50');
+                    }
+
+                    // Collision Detection
+                    const obsWidth = obs.el.offsetWidth || 42;
+                    const obsHeight = obs.el.offsetHeight || 68;
+                    const obsRect = {
+                        left: obs.x + 4,
+                        right: obs.x + obsWidth - 4,
+                        top: obs.y + 4,
+                        bottom: obs.y + obsHeight - 4
+                    };
+
+                    if (
+                        carRect.right > obsRect.left &&
+                        carRect.left < obsRect.right &&
+                        carRect.bottom > obsRect.top &&
+                        carRect.top < obsRect.bottom
+                    ) {
+                        this.gameOver();
+                        return;
+                    }
+
+                    // Remove out of screen obstacles
+                    if (obs.y > this.track.clientHeight + 90) {
+                        if (obs.el.parentNode) obs.el.parentNode.removeChild(obs.el);
+                        this.obstacles.splice(i, 1);
+                    }
+                }
+
+                this.updateHUD();
+                this.animationId = requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            updateHUD() {
+                this.speedVal.textContent = Math.round(this.speed);
+                this.scoreVal.textContent = this.score;
+                this.multiplierVal.textContent = `${this.multiplier}x`;
+                this.streakVal.textContent = this.streak;
+
+                // Speed bar fill (0 to 140 MPH)
+                const speedPercent = Math.min(100, (this.speed / 140) * 100);
+                this.speedBar.style.width = `${speedPercent}%`;
+            },
+
+            gameOver() {
+                this.gameActive = false;
+                cancelAnimationFrame(this.animationId);
+                this.car.classList.remove('nitro-active');
+                this.sound.playCrash();
+
+                // High score logic
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    localStorage.setItem('tsr_highscore', this.highScore.toString());
+                }
+
+                // Stats calculations
+                const elapsedMin = Math.max(0.1, (Date.now() - this.gameStartTime) / 60000);
+                const kpm = Math.round(this.totalKeysPressed / elapsedMin);
+
+                this.finalScoreDisplay.textContent = this.score;
+                this.highScoreDisplay.textContent = this.highScore;
+                this.maxSpeedDisplay.textContent = `${this.maxSpeedReached} MPH`;
+                this.avgKpmDisplay.textContent = `${kpm} KPM`;
+                this.gameOverDisplay.style.display = 'block';
+            },
+
+            resetGame() {
+                this.score = 0;
+                this.distance = 0;
+                this.speed = 0;
+                this.maxSpeedReached = 0;
+                this.multiplier = 1.0;
+                this.streak = 0;
+                this.totalKeysPressed = 0;
+                this.spawnTimer = 0;
+                this.carTilt = 0;
+                this.car.classList.remove('nitro-active');
+
+                // Clear all obstacles
+                this.obstacles.forEach(obs => {
+                    if (obs.el.parentNode) obs.el.parentNode.removeChild(obs.el);
+                });
+                this.obstacles = [];
+
+                this.resetPosition();
+                this.updateHUD();
+                this.typingDisplay.textContent = '-';
+                this.cadenceStatus.textContent = 'Press 1-6 to Launch!';
+                this.cadenceStatus.style.color = '#8b949e';
+                this.gameOverDisplay.style.display = 'none';
+            }
+        };
+
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            game.init();
+        });
+    </script>
+</body>
+</html>
